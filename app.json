@@ -3,6 +3,7 @@
     "name": "mis-gastos-mob",
     "slug": "mis-gastos-mob",
     "version": "1.0.0",
+    "scheme": "exp",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
