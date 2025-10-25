@@ -3,6 +3,7 @@ import { StyleSheet, View, TouchableOpacity, Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Navigation from './src/navigation';
 import { ActivityIndicator } from 'react-native';
 
@@ -13,11 +14,8 @@ const auth0Domain = process.env.AUTH0_DOMAIN;
 
 const redirectUri = AuthSession.makeRedirectUri({
   scheme: 'exp',
-  path: ''
+  path: '',
 });
-console.log('Redirect URI:', redirectUri);
-
-const useProxy = true;
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -30,8 +28,9 @@ export default function App() {
       responseType: 'token',
       scopes: ['openid', 'profile', 'email'],
       extraParams: {
-        nonce: 'nonce'
+        nonce: 'nonce',
       },
+      usePKCE: false,
     },
     {
       authorizationEndpoint: `https://${auth0Domain}/authorize`,
@@ -40,18 +39,34 @@ export default function App() {
   );
 
   useEffect(() => {
-    if (response?.type === 'success') {
-      const { access_token } = response.params;
-      // Aquí puedes guardar el token en un estado global o AsyncStorage
-      setIsAuthenticated(true);
-    }
-    setIsLoading(false);
+    const loadToken = async () => {
+      const token = await AsyncStorage.getItem('authToken');
+      if (token) {
+        setIsAuthenticated(true);
+      }
+      setIsLoading(false);
+    };
+
+    loadToken();
+  }, []);
+
+  useEffect(() => {
+    const handleResponse = async () => {
+      if (response?.type === 'success') {
+        const { access_token } = response.params;
+        await AsyncStorage.setItem('authToken', access_token);
+        setIsAuthenticated(true);
+      }
+      setIsLoading(false);
+    };
+
+    handleResponse();
   }, [response]);
 
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#0000ff" />
+        <ActivityIndicator size="large" color="#2563eb" />
       </View>
     );
   }
@@ -59,12 +74,9 @@ export default function App() {
   if (!isAuthenticated) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#0000ff" />
+        <ActivityIndicator size="large" color="#2563eb" />
         {request && (
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => promptAsync()}
-          >
+          <TouchableOpacity style={styles.button} onPress={() => promptAsync()}>
             <Text style={styles.buttonText}>Iniciar Sesión</Text>
           </TouchableOpacity>
         )}
@@ -88,13 +100,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   button: {
-    backgroundColor: '#2196F3',
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 10,
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 999,
+    marginTop: 16,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
   },
 });
